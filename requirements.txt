@@ -1,0 +1,8 @@
+flask
+scapy
+pandas
+numpy
+scikit-learn
+openai
+requests
+pickle5
