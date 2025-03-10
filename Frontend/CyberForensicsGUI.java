@@ -5,7 +5,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class NetworkMonitor {
+public class CyberForensicsGUI{
     private static JTextArea textArea;
 
     public static void main(String[] args) {
