@@ -1,5 +1,5 @@
 import openai
-openai.api_key = "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"
+openai.api_key = ""
 
 def generate_report(threat_data):
     prompt = f"Analyze the following network threat:\n{threat_data}"
