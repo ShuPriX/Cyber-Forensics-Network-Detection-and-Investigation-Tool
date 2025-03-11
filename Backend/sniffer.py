@@ -1,4 +1,4 @@
-from scapy.all import sniff, IP, TCP, UDP
+from scapy.all import sniff, IP
 from flask import Flask, jsonify
 
 app = Flask(__name__)
