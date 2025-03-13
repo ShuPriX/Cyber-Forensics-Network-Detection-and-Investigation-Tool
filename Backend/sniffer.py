@@ -19,5 +19,5 @@ def get_packets():
     return jsonify(captured_packets[-10:])  # Send last 10 packets
 
 if __name__ == "__main__":
-    sniff(prn=packet_callback, store=False)
+    sniff(prn=packet_callback, store=False, iface="wlan0")
     app.run(port=5000)
