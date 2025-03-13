@@ -1,4 +1,5 @@
-# **Cyber Forensics: Network Detection & Investigation Tool**
+# **NetHawk2 🦅 : Network Detection & Investigation Tool**
+# *Sharp, precise, and always watching the network.*
 
 ## 🔍 **Introduction**
 Cybersecurity threats are on the rise, and network monitoring is crucial for detecting and preventing malicious activity. This project is a **Cyber-Forensics AI-powered tool** that monitors live network traffic, detects anomalies using **Machine Learning**, and provides **AI-driven forensic analysis** of potential threats.
