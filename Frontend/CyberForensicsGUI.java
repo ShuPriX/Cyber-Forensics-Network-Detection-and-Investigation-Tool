@@ -12,7 +12,6 @@ public class CyberForensicsGUI{
         JFrame frame = new JFrame("Cyber Forensics AI - Network Monitor");
         frame.setSize(600, 400);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
         textArea = new JTextArea();
         frame.add(new JScrollPane(textArea), BorderLayout.CENTER);
 
