@@ -1,34 +1,70 @@
-from scapy.all import sniff, IP
-from flask import Flask, jsonify
-from threading import Thread
+from scapy.all import sniff, IP, TCP, UDP, ICMP
+import socket
+import json
+import threading
 
-app = Flask(__name__)
-captured_packets = []
+# Protocol mapping
+protocols = {
+    1: "ICMP",
+    6: "TCP",
+    17: "UDP",
+    89: "OSPF",
+    132: "SCTP"
+    # Add more protocols as needed
+}
 
-def packet_callback(packet):
+# Get the local machine's IP address
+local_ip = socket.gethostbyname(socket.gethostname())
+
+# Create a socket to send data to the Java application
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(('localhost', 5000))
+server_socket.listen(1)
+print("Waiting for Java application to connect...")
+
+def packet_callback(packet, conn):
     try:
         if IP in packet:
+            proto_number = packet[IP].proto
+            proto_name = protocols.get(proto_number, f"Unknown Protocol ({proto_number})")
+            direction = "Incoming" if packet[IP].dst == local_ip else "Outgoing"
             packet_info = {
                 "src": packet[IP].src,
                 "dst": packet[IP].dst,
-                "proto": packet[IP].proto,
+                "proto": proto_name,
                 "size": len(packet),
+                "direction": direction
             }
-            captured_packets.append(packet_info)
+
+            # Additional detailed analysis
+            if TCP in packet:
+                packet_info["tcp_flags"] = str(packet[TCP].flags)
+            elif UDP in packet:
+                packet_info["udp_sport"] = packet[UDP].sport
+                packet_info["udp_dport"] = packet[UDP].dport
+            elif ICMP in packet:
+                packet_info["icmp_type"] = packet[ICMP].type
+                packet_info["icmp_code"] = packet[ICMP].code
+
+            # Send the packet info to the Java application
+            conn.sendall((json.dumps(packet_info) + "\n").encode('utf-8'))
     except Exception as e:
         print(f"Error processing packet: {e}")
 
-@app.route('/packets', methods=['GET'])
-def get_packets():
-    return jsonify(captured_packets[-10:])  # Send last 10 packets
+def start_sniffing(conn):
+    sniff(prn=lambda packet: packet_callback(packet, conn), store=False, iface="wlan0")
 
-def start_sniffing():
-    sniff(prn=packet_callback, store=False, iface="wlan0")
+def handle_client(conn, addr):
+    print(f"Connected by {addr}")
+    start_sniffing(conn)
+    conn.close()
+    print(f"Disconnected by {addr}")
+
+def accept_connections():
+    while True:
+        conn, addr = server_socket.accept()
+        client_thread = threading.Thread(target=handle_client, args=(conn, addr))
+        client_thread.start()
 
 if __name__ == "__main__":
-    # Start the packet sniffing in a separate thread
-    sniff_thread = Thread(target=start_sniffing)
-    sniff_thread.start()
-
-    # Run the Flask app
-    app.run(port=5000)
+    accept_connections()
