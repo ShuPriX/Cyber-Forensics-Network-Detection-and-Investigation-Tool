@@ -1,19 +1,19 @@
 import openai
-import json
 
-# Set your OpenAI API key here
-openai.api_key = "secret"
+# Initialize the OpenAI client
+client = openai.Client(api_key="secret")  # Replace "secret" with your actual API key
 
 def generate_report(threat_data):
     prompt = f"Analyze the following network threat:\n{threat_data}"
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
+    
+    response = client.chat.completions.create(  # Correct API usage
+        model="o1-mini",
         messages=[
             {"role": "system", "content": "You are a cybersecurity expert."},
             {"role": "user", "content": prompt}
         ]
     )
-    return response["choices"][0]["message"]["content"]
+    return response.choices[0].message.content
 
 def analyze_threat(threat_data):
     report = generate_report(threat_data)
