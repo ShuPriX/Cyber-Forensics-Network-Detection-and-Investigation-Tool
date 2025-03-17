@@ -2,6 +2,8 @@ import javax.swing.*;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.Border;
 import javax.swing.border.TitledBorder;
+import javax.swing.table.DefaultTableModel;
+import org.json.JSONObject;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -10,72 +12,59 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
-public class CyberForensicsGUI {
-    private static JTextArea textArea;
+public class NewUI2 {
+    private static JTable packetTable;
+    private static DefaultTableModel tableModel;
     private static Socket socket;
     private static BufferedReader in;
     private static boolean isConnected = false;
 
     public static void main(String[] args) {
         JFrame frame = new JFrame("Cyber Forensics AI - Network Monitor");
-        frame.setSize(1240, 720); // Set the resolution to 1080p
+        frame.setSize(1240, 720);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // Set the font to Cascadia Code
+        // Set the font
         Font font = new Font("Cascadia Code", Font.PLAIN, 18);
         UIManager.put("Button.font", font);
-        UIManager.put("TextArea.font", font);
+        UIManager.put("Table.font", font);
 
-        // Create a custom titled border with centered title
+        // Custom titled border with centered title
         Border border = BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.black, 5), "NetHawk2");
         TitledBorder titledBorder = (TitledBorder) border;
         titledBorder.setTitleJustification(TitledBorder.CENTER);
         titledBorder.setTitlePosition(TitledBorder.TOP);
-
-        // Set the title font size to 20
-        Font titleFont = new Font("Cascadia Code", Font.PLAIN, 24);
-        titledBorder.setTitleFont(titleFont);
+        titledBorder.setTitleFont(new Font("Cascadia Code", Font.PLAIN, 24));
 
         JPanel panel = new JPanel();
         panel.setBorder(border);
         panel.setLayout(new BorderLayout());
         frame.add(panel);
 
-        textArea = new JTextArea();
-        textArea.setEditable(false);
-        panel.add(new JScrollPane(textArea), BorderLayout.CENTER);
+        // Create table model and table
+        String[] columnNames = {"Source IP", "Destination IP", "Protocol", "Size", "Direction", "Details"};
+        tableModel = new DefaultTableModel(columnNames, 0);
+        packetTable = new JTable(tableModel);
+        JScrollPane scrollPane = new JScrollPane(packetTable);
+        panel.add(scrollPane, BorderLayout.CENTER);
 
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20)); // Add some spacing between buttons
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20));
 
         JButton connectButton = new JButton("Connect");
-        connectButton.setBackground(Color.GREEN);
-        connectButton.setForeground(Color.WHITE);
-        connectButton.setFont(new Font("Cascadia Code", Font.PLAIN, 16)); // Increase font size
-        connectButton.setBorder(new RoundedBorder(Color.GREEN, 20)); // Rounded border
-        connectButton.setPreferredSize(new Dimension(150, 32)); // Increase button size
-        connectButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (!isConnected) {
-                    connectToPythonServer();
-                }
+        styleButton(connectButton, Color.GREEN);
+        connectButton.addActionListener(e -> {
+            if (!isConnected) {
+                connectToPythonServer();
             }
         });
         buttonPanel.add(connectButton);
 
         JButton disconnectButton = new JButton("Disconnect");
-        disconnectButton.setBackground(Color.RED);
-        disconnectButton.setForeground(Color.WHITE);
-        disconnectButton.setFont(new Font("Cascadia Code", Font.PLAIN, 16)); // Increase font size
-        disconnectButton.setBorder(new RoundedBorder(Color.RED, 20)); // Rounded border
-        disconnectButton.setPreferredSize(new Dimension(150, 32)); // Increase button size
-        disconnectButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (isConnected) {
-                    disconnectFromPythonServer();
-                }
+        styleButton(disconnectButton, Color.RED);
+        disconnectButton.addActionListener(e -> {
+            if (isConnected) {
+                disconnectFromPythonServer();
             }
         });
         buttonPanel.add(disconnectButton);
@@ -90,19 +79,34 @@ public class CyberForensicsGUI {
             socket = new Socket("localhost", 5000);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             isConnected = true;
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        String line;
-                        while ((line = in.readLine()) != null) {
-                            textArea.append(line + "\n");
+            new Thread(() -> {
+                try {
+                    String line;
+                    while ((line = in.readLine()) != null) {
+                        JSONObject packetData = new JSONObject(line);
+                        String src = packetData.getString("src");
+                        String dst = packetData.getString("dst");
+                        String proto = packetData.getString("proto");
+                        int size = packetData.getInt("size");
+                        String direction = packetData.getString("direction");
+
+                        // Extract extra details
+                        String details = "";
+                        if (packetData.has("tcp_flags")) {
+                            details = "TCP Flags: " + packetData.getString("tcp_flags");
+                        } else if (packetData.has("udp_sport") && packetData.has("udp_dport")) {
+                            details = "UDP Ports: " + packetData.getInt("udp_sport") + " → " + packetData.getInt("udp_dport");
+                        } else if (packetData.has("icmp_type") && packetData.has("icmp_code")) {
+                            details = "ICMP Type: " + packetData.getInt("icmp_type") + ", Code: " + packetData.getInt("icmp_code");
                         }
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    } finally {
-                        isConnected = false;
+
+                        // Add row to table
+                        tableModel.addRow(new Object[]{src, dst, proto, size, direction, details});
                     }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                } finally {
+                    isConnected = false;
                 }
             }).start();
         } catch (Exception ex) {
@@ -116,16 +120,24 @@ public class CyberForensicsGUI {
                 socket.close();
             }
             isConnected = false;
-            textArea.append("Disconnected from the server.\n");
+            tableModel.setRowCount(0); // Clear table on disconnect
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
+    private static void styleButton(JButton button, Color color) {
+        button.setBackground(color);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Cascadia Code", Font.PLAIN, 16));
+        button.setBorder(new RoundedBorder(color, 20));
+        button.setPreferredSize(new Dimension(150, 32));
+    }
+
     // Custom Rounded Border Class
     static class RoundedBorder extends AbstractBorder {
-        private int radius;
-        private Color color;
+        private final int radius;
+        private final Color color;
 
         public RoundedBorder(Color color, int radius) {
             this.color = color;
