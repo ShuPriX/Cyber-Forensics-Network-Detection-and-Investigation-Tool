@@ -2,6 +2,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import pickle
+api_key="BQS?8F#ks-GB\6`Bl8!6@:sUhD(]=:D(fc\?ZIi:Cgo52CHlNGF(d^F1.=$1D)<tA860q<=B.*"
 
 # Load dataset
 df = pd.read_csv("network_traffic.csv")
